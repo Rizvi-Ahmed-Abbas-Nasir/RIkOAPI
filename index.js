@@ -6,10 +6,19 @@ const app = express();
 app.use(express.json());
 app.use(cors({ origin: "*" }));
 
+import dotenv from "dotenv";
+dotenv.config();
 
-const GEMINI_API_KEY =  "AIzaSyCs7m1mpQfb4-Go-PckeiQRR5hiEMfHAE0";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+if (!GEMINI_API_KEY) {
+  throw new Error("GEMINI_API_KEY is missing");
+}
+
+
 const GEMINI_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
 
 const rikoContext = `
 You are Riko AI 🤖✨
@@ -47,7 +56,6 @@ app.post("/api/RikoChat", async (req, res) => {
       return res.status(400).json({ error: "Messages are required" });
     }
 
-    // Gemini format
     const contents = [
       {
         role: "user",
@@ -60,7 +68,7 @@ app.post("/api/RikoChat", async (req, res) => {
     ];
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSyCtA5cYEtgntvDlpyAlOvmTtc2ct4mcH08`,
+      `${GEMINI_URL}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
