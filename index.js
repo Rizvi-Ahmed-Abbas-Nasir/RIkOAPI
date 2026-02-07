@@ -3,8 +3,19 @@ import cors from "cors";
 import fetch from "node-fetch";
 
 const app = express();
+
+// Configure CORS properly
+app.use(cors({
+  origin: "*", // Or specify your frontend URL: "https://riko-lake.vercel.app"
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
+}));
+
+// Handle preflight requests explicitly
+app.options("*", cors());
+
 app.use(express.json());
-app.use(cors({ origin: "*" }));
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -15,10 +26,8 @@ if (!GEMINI_API_KEY) {
   throw new Error("GEMINI_API_KEY is missing");
 }
 
-
 const GEMINI_URL =
   `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
 
 const rikoContext = `
 You are Riko AI 🤖✨
@@ -115,4 +124,20 @@ app.post("/api/RikoChat", async (req, res) => {
       error: error.message,
     });
   }
+});
+
+// Add a test endpoint to verify the API is working
+app.get("/api/health", (req, res) => {
+  res.json({ 
+    status: "OK", 
+    service: "Riko Chat API",
+    timestamp: new Date().toISOString() 
+  });
+});
+
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`✅ Health check: http://localhost:${PORT}/api/health`);
 });
