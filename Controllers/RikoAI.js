@@ -7,7 +7,7 @@ app.use(express.json());
 app.use(cors({ origin: "*" }));
 
 
-const GEMINI_API_KEY = "AIzaSyCs7m1mpQfb4-Go-PckeiQRR5hiEMfHAE0";
+const GEMINI_API_KEY = "";
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 

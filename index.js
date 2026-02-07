@@ -48,6 +48,23 @@ Tone:
 - Slightly playful
 `;
 
+function formatAIResponse(text) {
+  if (!text) return "";
+
+  return text
+    // remove **bold**
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    // remove *italic*
+    .replace(/\*(.*?)\*/g, "$1")
+    // remove bullets (* - •) at line start
+    .replace(/^\s*[\*\-•]\s+/gm, "")
+    // remove markdown headings (# ## ###)
+    .replace(/^#+\s?/gm, "")
+    // normalize spacing
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 app.post("/api/RikoChat", async (req, res) => {
   try {
     const { messages = [] } = req.body;
@@ -67,14 +84,11 @@ app.post("/api/RikoChat", async (req, res) => {
       })),
     ];
 
-    const response = await fetch(
-      `${GEMINI_URL}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents }),
-      }
-    );
+    const response = await fetch(GEMINI_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents }),
+    });
 
     if (!response.ok) {
       const err = await response.text();
@@ -83,9 +97,11 @@ app.post("/api/RikoChat", async (req, res) => {
 
     const data = await response.json();
 
-    const aiResponse =
+    const rawResponse =
       data?.candidates?.[0]?.content?.parts?.[0]?.text ||
       "No response from Gemini";
+
+    const aiResponse = formatAIResponse(rawResponse);
 
     res.json({
       success: true,
@@ -99,14 +115,4 @@ app.post("/api/RikoChat", async (req, res) => {
       error: error.message,
     });
   }
-});
-
-// Health check
-app.get("/health", (_, res) => {
-  res.json({ status: "ok", service: "Riko Gemini API" });
-});
-
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Riko Gemini backend running on port ${PORT}`);
 });
