@@ -60,19 +60,35 @@ Tone:
 function formatAIResponse(text) {
   if (!text) return "";
 
-  return text
-    // remove **bold**
-    .replace(/\*\*(.*?)\*\*/g, "$1")
-    // remove *italic*
-    .replace(/\*(.*?)\*/g, "$1")
-    // remove bullets (* - •) at line start
-    .replace(/^\s*[\*\-•]\s+/gm, "")
-    // remove markdown headings (# ## ###)
-    .replace(/^#+\s?/gm, "")
-    // normalize spacing
+  // Step 1: Clean markdown
+  let cleaned = text
+    .replace(/\*\*(.*?)\*\*/g, "$1")   // bold
+    .replace(/\*(.*?)\*/g, "$1")       // italic
+    .replace(/^#+\s?/gm, "")           // headings
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+
+  // Step 2: Convert bullet lists to numbered lists
+  const lines = cleaned.split("\n");
+  let counter = 1;
+  let inList = false;
+
+  const formattedLines = lines.map((line) => {
+    if (/^\s*[\*\-•]\s+/.test(line)) {
+      if (!inList) {
+        counter = 1;
+        inList = true;
+      }
+      return `${counter++}. ${line.replace(/^\s*[\*\-•]\s+/, "")}`;
+    } else {
+      inList = false;
+      return line;
+    }
+  });
+
+  return formattedLines.join("\n").trim();
 }
+
 
 app.post("/api/RikoChat", async (req, res) => {
   try {
