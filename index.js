@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
+import OpenAI from "openai";
 
 const app = express();
 
@@ -18,16 +19,17 @@ app.options("*", cors());
 app.use(express.json());
 
 import dotenv from "dotenv";
+
+
 dotenv.config();
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-if (!GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY is missing");
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error("OPENAI_API_KEY is missing");
 }
 
-const GEMINI_URL =
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 const rikoContext = `
 You are Riko AI 🤖✨
@@ -98,33 +100,18 @@ app.post("/api/RikoChat", async (req, res) => {
       return res.status(400).json({ error: "Messages are required" });
     }
 
-    const contents = [
-      {
-        role: "user",
-        parts: [{ text: rikoContext }],
-      },
-      ...messages.map((m) => ({
-        role: "user",
-        parts: [{ text: m.content }],
-      })),
-    ];
+    // Convert chat history → single input text
+    const conversation = messages
+      .map(m => `${m.role || "user"}: ${m.content}`)
+      .join("\n");
 
-    const response = await fetch(GEMINI_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents }),
+    const response = await client.responses.create({
+      model: "gpt-5-mini",   // ✅ your purchased model
+      input: `${rikoContext}\n\n${conversation}`,
     });
 
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(err);
-    }
-
-    const data = await response.json();
-
     const rawResponse =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "No response from Gemini";
+      response.output_text || "No response from GPT";
 
     const aiResponse = formatAIResponse(rawResponse);
 
@@ -133,14 +120,16 @@ app.post("/api/RikoChat", async (req, res) => {
       response: aiResponse,
       timestamp: new Date().toISOString(),
     });
+
   } catch (error) {
-    console.error("❌ Gemini error:", error);
+    console.error("❌ GPT error:", error);
     res.status(500).json({
       success: false,
       error: error.message,
     });
   }
 });
+
 
 // Add a test endpoint to verify the API is working
 app.get("/api/health", (req, res) => {
